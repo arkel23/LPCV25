@@ -149,8 +149,14 @@ def get_backbone(args):
             global_pool='', mlp_ratio=args.mlp_ratio, img_size=img_size,
             pos_embedding_type=args.pos_embedding_type, drop_cls_token=drop_cls_token)
     elif any(model in args.model_name for model in [
+        'ception', 'resnest',
+    ]):
+        model = timm.create_model(
+            args.model_name, pretrained=args.pretrained, num_classes=0,
+            global_pool='')        
+    elif any(model in args.model_name for model in [
         'lcnet', 'resnet', 'convnext', 'densenet', 'resn',
-        'efficientnet', 'ception', 'rexn', 'regn', 'focalnet',
+        'efficientnet', 'rexn', 'regn', 'focalnet',
         'hrnet', 'hgnet', 'rdnet']):
         model = timm.create_model(
             args.model_name, pretrained=args.pretrained, num_classes=0,
