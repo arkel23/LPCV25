@@ -7,7 +7,8 @@ import torch
 import torch.nn as nn
 
 from .modules_others import van_dict, ViT, ViTConfig, Head, CAL, CRD
-from .regnety_mod import *
+# from .regnety_mod import *
+from .tresnet_mod import *
 
 
 VITS = [
@@ -34,7 +35,7 @@ def build_model(args, teacher=False, student=False):
         raise NotImplementedError
 
     if args.ckpt_path:
-        load_model_compatibility_mode(args, model)
+        load_model_compatibility_mode(args, model, teacher, student)
 
     if teacher and not args.train_both:
         freeze_backbone(model)
@@ -44,6 +45,7 @@ def build_model(args, teacher=False, student=False):
     else:
         model.to(args.device)
 
+    print(f'Student: {student} Teacher: {teacher}')
     print(f'Initialized classifier: {args.model_name}')
     return model
 
@@ -73,7 +75,7 @@ def convert_cal_student(state_dict):
     return new_state_dict
 
 
-def load_model_compatibility_mode(args, model):
+def load_model_compatibility_mode(args, model, teacher=False, student=False):
     state_dict = torch.load(
         args.ckpt_path, map_location=torch.device('cpu'))['model']
     expected_missing_keys = []
@@ -96,10 +98,12 @@ def load_model_compatibility_mode(args, model):
     if args.transfer_learning_cal:
         state_dict = convert_cal_student(state_dict)
 
-    if args.transfer_learning:
+    if args.transfer_learning and ((teacher is False and student is False) or student):
         # modifications to load partial state dict
         if ('model.head.weight' in state_dict):
             expected_missing_keys += ['model.head.weight', 'model.head.bias']
+        if ('head.head.weight' in state_dict):
+            expected_missing_keys += ['head.head.weight', 'head.head.bias']
         for key in expected_missing_keys:
             state_dict.pop(key)
     ret = model.load_state_dict(state_dict, strict=False)
@@ -268,7 +272,7 @@ class ClassifierModel(nn.Module):
 
         else:
             self.model = model
-            self.head = Head(args.classifier, d, args.num_classes, bsd)
+            self.head = Head(args.classifier, d, args.num_classes, bsd, args.model_name)
 
             if teacher and args.kd_aux_loss == 'crd':
                 self.return_inter_feats = True
@@ -287,7 +291,12 @@ class ClassifierModel(nn.Module):
         x = torch.rand(2, 3, image_size, image_size)
         x = model(x)
 
-        if len(x.shape) == 3:
+        if isinstance(x, tuple) and len(x) == 2:
+            b, d, h, w = x[-1].shape
+            s = h * w
+            bsd = False
+
+        elif len(x.shape) == 3:
             b, s, d = x.shape
             bsd = True
         elif len(x.shape) == 4:
@@ -306,7 +315,10 @@ class ClassifierModel(nn.Module):
             s = h * w
             bsd = False
 
-        print('Output feature shape: ', x.shape)
+        try:
+            print('Output feature shape: ', x.shape)
+        except:
+            print('Output feature shape: ', x[-1].shape)
 
         return s, d, bsd
 

@@ -117,7 +117,11 @@ def standard_transform(args, is_train):
     t = []
 
     if is_train:
-        if args.affine:
+        if args.train_resize_directly:
+            t.append(ImitateQAI(image_size))
+            t.append(transforms.ToTensor())
+            args.solarize = args.solarize / 255
+        elif args.affine:
             t.append(transforms.Resize(
                 (resize_size, resize_size), interpolation=BICUBIC))
             t.append(transforms.RandomAffine(degrees=15, scale=(0.85, 1.15),
@@ -151,6 +155,18 @@ def standard_transform(args, is_train):
             t.append(transforms.RandomApply([transforms.ColorJitter(
                 brightness=args.jitter_bcs, contrast=args.jitter_bcs,
                 saturation=args.jitter_bcs, hue=args.jitter_hue)], p=args.jitter_prob))
+
+        if args.three_aug:
+            t.append(
+                transforms.RandomChoice([
+                    transforms.GaussianBlur(
+                        kernel_size=image_size//20*2+1, sigma=(0.1, 2.0)
+                    ),
+                    transforms.RandomGrayscale(p=0.5),
+                    transforms.RandomSolarize(args.solarize, p=0.5),
+                ])
+            )
+
         if args.greyscale > 0:
             t.append(transforms.RandomGrayscale(p=args.greyscale))
         if args.blur > 0:
@@ -159,7 +175,8 @@ def standard_transform(args, is_train):
                     kernel_size=image_size//20*2+1, sigma=(0.1, 2.0))], p=args.blur))
         if args.solarize_prob > 0:
             t.append(transforms.RandomApply(
-                [transforms.RandomSolarize(args.solarize, p=args.solarize_prob)]))
+                [transforms.RandomSolarize(args.solarize)], p=args.solarize_prob))
+
         if args.auto_aug:
             t.append(aa)
         if args.rand_aug:
@@ -188,7 +205,10 @@ def standard_transform(args, is_train):
             else:
                 t.append(ResizeAndPad(image_size, padding_value=255))
 
-    t.append(transforms.ToTensor())
+    if is_train and args.train_resize_directly:
+        pass
+    else:
+        t.append(transforms.ToTensor())
     # t.append(PrintTransform())
     t.append(transforms.Normalize(mean=mean, std=std))
     if is_train and args.re > 0:

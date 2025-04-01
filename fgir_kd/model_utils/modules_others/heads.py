@@ -1,12 +1,18 @@
+import torch
 from torch import nn
+from einops import reduce
 from einops.layers.torch import Reduce, Rearrange
 
 
 class Head(nn.Module):
-    def __init__(self, classifier, hidden_size, num_classes, bsd=True):
+    def __init__(self, classifier, hidden_size, num_classes, bsd=True, model_name=None):
         super().__init__()
 
-        if classifier == 'cls':
+        if 'tresnet_m_mod' in model_name:
+            self.clf_pool = True
+            self.head = nn.Linear(int(hidden_size * 1.5), num_classes)
+
+        elif classifier == 'cls':
             self.head = nn.Linear(hidden_size, num_classes)
         else:
             self.head_pool = Reduce('b s d -> b d', 'mean')
@@ -17,6 +23,14 @@ class Head(nn.Module):
 
     def forward(self, x):
         # x shape: B (batch size), S (sequence length), D (hidden dim size) or B, D, H, W
+        if hasattr(self, 'clf_pool'):
+            x1, x2 = x
+            x1 = reduce(x1, 'b d h w -> b d', 'mean')
+            x2 = reduce(x2, 'b d h w -> b d', 'mean')
+            x = torch.cat([x1, x2], dim=-1)
+            x = self.head(x)
+            return x
+
         if hasattr(self, 'rearrange'):
             x = self.rearrange(x)
 

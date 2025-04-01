@@ -75,8 +75,8 @@ def build_environment(args):
         torch.backends.cudnn.enabled = True
         torch.backends.cudnn.benchmark = True
 
-    if not args.ckpt_path or args.transfer_learning:
-        adjust_args_general(args)
+    # if not args.ckpt_path or args.transfer_learning:
+    adjust_args_general(args)
     os.makedirs(args.results_dir, exist_ok=True)
 
     return model, criterion, optimizer, lr_scheduler, train_loader, val_loader, test_loader

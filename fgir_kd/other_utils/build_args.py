@@ -245,6 +245,8 @@ def add_model_args(parser):
 def add_augmentation_args(parser):
     # cropping
     parser.add_argument('--resize_size', type=int, default=None, help='resize_size before cropping')
+    parser.add_argument('--train_resize_directly', action='store_true',
+                        help='resizes directly to target image size instead of to larger then center crop')
     parser.add_argument('--test_resize_size', type=int, default=None, help='test resize_size before cropping')
     parser.add_argument('--test_square_resize_center_crop', action='store_true',
                         help='resize image to a square of side resize_size then center crop')
@@ -267,13 +269,14 @@ def add_augmentation_args(parser):
     parser.add_argument('--vertical_flip', action='store_true',
                         help='use vertical flip (off by default)')
     # augmentation policies
+    parser.add_argument('--three_aug', action='store_true')
     parser.add_argument('--auto_aug', action='store_true', help='Auto augmentation used')
     parser.add_argument('--rand_aug', action='store_true', help='RandAugment augmentation used')
     parser.add_argument('--trivial_aug', action='store_true', help='use trivialaugmentwide')
     # color and distortion
-    parser.add_argument('--jitter_prob', type=float, default=0.0,
+    parser.add_argument('--jitter_prob', type=float, default=0.3,
                         help='color jitter probability of applying (0.8 for simclr)')
-    parser.add_argument('--jitter_bcs', type=float, default=0.4,
+    parser.add_argument('--jitter_bcs', type=float, default=0.3,
                         help='color jitter brightness contrast saturation (0.4 for simclr)')
     parser.add_argument('--jitter_hue', type=float, default=0.1,
                         help='color jitter hue value (0.1 for simclr)')
@@ -375,6 +378,10 @@ def parse_train_args(ret_parser=False):
 
 def parse_inference_args():
     parser = parse_train_args(ret_parser=True)
+    # retrieval database
+    parser.add_argument('--db_size', type=int, default=1000)
+    parser.add_argument('--db_images_per_class', type=int, default=None)
+    # inference
     parser.add_argument('--images_path', type=str, default='samples',
                         help='path to folder (with images) or image')
     parser.add_argument('--results_inference', type=str, default='results_inference',

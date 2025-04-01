@@ -152,10 +152,10 @@ def main():
                 wandb.run.name = args.run_name
             if not args.distributed:
                 print(model_s, model_s.cfg)
-                try:
-                    summary(model_s, torch.rand(2, 3, args.image_size, args.image_size).shape[1:])
-                except:
-                    print('Not implemented for summary')
+                # try:
+                #     summary(model_s, torch.rand(2, 3, args.image_size, args.image_size).shape[1:])
+                # except:
+                #    print('Not implemented for summary')
             print(args)
 
         best_acc, best_epoch, max_memory, no_params, no_params_trainable, class_deviation = trainer.train()
